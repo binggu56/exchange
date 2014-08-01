@@ -1,0 +1,157 @@
+      subroutine fitp(am1,am2,x,y,px,py,w,Ntraj,dxpx,dxpy,dypx,dypy,
+     +                qp,qfx,qfy,rx,ry)
+c     -------------------------------------------------
+c     subroutine to do least-square fitting to momemtum 
+c     and non-classical momemtum 
+c     -------------------------------------------------
+      implicit real*8(a-h,o-z)
+
+      integer*4,intent(IN) :: Ntraj
+      real*8, intent(in)   :: am1,am2
+      real*8, intent(IN)   :: px(Ntraj),py(Ntraj),w(Ntraj),x(Ntraj),
+     +                        y(Ntraj)
+      real*8,dimension(ntraj) :: dxpx,dypx,dxpy,dypy
+      integer*4, parameter :: nb = 8, ndim = 2
+
+      real*8 :: f(nb),s(nb,nb),c(nb,2),cq(nb,2),dxf(nb),dyf(nb)
+      real*8 :: mat(nb,nb)
+      real*8,dimension(ntraj) :: dxrx,dxry,dyrx,dyry,rx,ry,qfx,qfy,qp
+
+      c = 0d0
+      s = 0d0
+      cq = 0d0
+
+      do j=1,nb
+        do i=1,Ntraj
+          f = (/x(i),x(i)**2,x(i)**3,y(i),y(i)**2,y(i)**3,
+     +        x(i)*y(i),1d0/)
+          dxf = (/1d0,2d0*x(i),3d0*x(i)**2,0d0,0d0,0d0,y(i),0d0/)
+          dyf = (/0d0,0d0,0d0,1d0,2d0*y(i),3d0*y(i)**2,x(i),0d0/)
+          c(j,1) = c(j,1)+px(i)*f(j)*w(i)
+          c(j,2) = c(j,2)+py(i)*f(j)*w(i)
+          c(j,ndim+1) = cq(j,1)+w(i)*dxf(j)
+          c(j,ndim+2) = cq(j,2)+w(i)*dyf(j)
+        enddo
+      enddo
+
+!      cq = -0.5*cq
+
+
+      do m=1,nb
+        do n=1,nb
+          do i=1,Ntraj
+            f=(/x(i),x(i)**2,x(i)**3,y(i),y(i)**2,y(i)**3,x(i)*y(i),
+     +         1d0/)
+c            f=(/x(i),x(i)**2,x(i)**3,1d0/)
+            s(m,n)=w(i)*f(m)*f(n)+s(m,n)
+          end do
+        end do
+      end do
+
+      mat = s
+! calculate matrix c(t)
+        call DPOSV('U',nb,2,mat,nb,c,nb,INFO)
+        if(INFO/=0) then
+        print *, "info=",info
+        print *, "polynomial fitting : matrix fails"
+        stop
+        end if
+     
+      mat = s
+      call DPOSV('U',nb,2,mat,nb,cq,nb,INFO)
+      if(INFO/=0) then
+      print *, "info=",info
+      print *, "quantum potential : matrix fails"
+      stop
+      end if
+
+
+      do i=1,ntraj
+        dxpx(i) = 0d0
+        dxpy(i) = 0d0
+        dypx(i) = 0d0
+        dypy(i) = 0d0
+      enddo
+      
+
+      do i=1,Ntraj
+c          dpx(i) = c(1,1)+2d0*c(2,1)*x(i)+c(3,1)*3d0*x(i)**2
+        f=(/x(i),x(i)**2,x(i)**3,y(i),y(i)**2,y(i)**3,x(i)*y(i),
+     +         1d0/)
+        dxf = (/1d0,2d0*x(i),3d0*x(i)**2,0d0,0d0,0d0,y(i),0d0/)
+        dyf = (/0d0,0d0,0d0,1d0,2d0*y(i),3d0*y(i)**2,x(i),0d0/)
+       
+        do j=1,nb
+          dxpx(i) = dxpx(i)+dxf(j)*c(j,1)
+          dxpy(i) = dxpy(i)+dxf(j)*c(j,2)
+          dypx(i) = dypx(i)+dyf(j)*c(j,1)
+          dypy(i) = dypy(i)+dyf(j)*c(j,2)
+        enddo 
+      enddo
+      
+c     &             py(i)*(c(1,2)+2d0*c(3,2)*x(i)+c(5,2)*y(i))/am2
+c          dpy(i) = px(i)*(c(2,1)+2d0*c(4,1)*y(i)+c(5,1)*x(i))/am1+
+c     &             py(i)*(c(2,2)+2d0*c(4,2)*y(i)+c(5,2)*x(i))/am2
+! calculate quantum potential
+c          qp(i) = (c(1,1)+2d0*c(2,1)*x(i)+c(3,1)*3d0*x(i)**2)/2d0/am1
+c     &            (c(2,2)+2d0*c(4,2)*y(i)+c(5,2)*x(i))/2d0/am2
+c          qfx(i) = -(2d0*c(2,1)+6d0*x(i)*c(3,1))/2d0/am1
+c     qfy(i) = -(c(5,1)/2d0/am1+c(4,2)/am2)
+
+      rx = 0d0
+      ry = 0d0
+      dxrx = 0d0
+      dxry = 0d0
+      dyrx = 0d0
+      dyry = 0d0
+
+      do i=1,ntraj
+        f=(/x(i),x(i)**2,x(i)**3,y(i),y(i)**2,y(i)**3,x(i)*y(i),
+     +         1d0/)
+        dxf = (/1d0,2d0*x(i),3d0*x(i)**2,0d0,0d0,0d0,y(i),0d0/)
+        dyf = (/0d0,0d0,0d0,1d0,2d0*y(i),3d0*y(i)**2,x(i),0d0/)
+
+        do j=1,nb
+          rx(i) = rx(i)+cq(j,1)*f(j)
+          ry(i) = ry(i)+cq(j,2)*f(j)
+          dxrx(i) = dxrx(i)+dxf(j)*cq(j,1)
+          dyrx(i) = dyrx(i)+dyf(j)*cq(j,1)
+          dyry(i) = dyry(i)+dyf(j)*cq(j,2)
+          dxry(i) = dxry(i)+dxf(j)*cq(j,2)
+        enddo
+        
+        qp(i) = -1d0/2d0/m1*(rx(i)**2+dxrx(i))-
+     +          1d0/2d0/m2*(ry(i)**2+dyry(i))
+        qfx(i) = 1d0/2d0/m1*(2d0*rx(i)*dxrx(i)+2d0*cq(2,1)+
+     +           6d0*x(i)*cq(3,1))+
+     +           1d0/2d0/m2*(2d0*ry(i)*dxry(i)+cq(7,2))
+        qfy(i) = 1d0/2d0/m1*(2d0*rx(i)*dyrx(i)+cq(7,1))+
+     +           1d0/2d0/m2*(2d0*ry(i)*dyry(i)+2d0*cq(5,2)+
+     +           6d0*y(i)*cq(6,2))
+       enddo
+
+      return
+      end subroutine
+
+c     --------------------------------
+c     check the error of poly-fit of p
+c     --------------------------------
+      subroutine errp(nt,p,x,c,err)
+      implicit real*8(a-h,o-z)
+
+      integer*4, intent(in)  :: nt
+      real*8,    intent(in)  :: p(nt),x(nt),c(4,1)
+      real*8,    intent(out) :: err
+      
+      common/smaple/xmin,xmax,dx
+     
+      err = 0d0
+      do i=1,nt
+        pfit = c(1,1)*x(i)+c(2,1)*x(i)**2+c(3,1)*x(i)**3+c(4,1)
+        err = err+(p(i)-pfit)**2*dx
+      enddo
+
+      return
+      end subroutine
+
+

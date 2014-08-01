@@ -1,0 +1,11 @@
+2048 # number of trajectories
+2048,2d-3 # time steps
+1d0,1d0 # mass
+50,120 # idum1 & idum2
+1d0,1d0 # constants for initial wavefunction
+0d0,0d0 # center for the wavepacket
+0d0,0d0 # initial momentum
+6d0 # gamma
+
+
+

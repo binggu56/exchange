@@ -1,0 +1,14 @@
+Quantum Trajectories Code with Friction
+version : 1.1
+date    : 1/17/2014
+
+ weights =   0.0000000000000000     
+ Initial Conditions
+ ax =   1.0000000000000000     
+ ay =   1.0000000000000000     
+ Number of trajectories =        2048
+ Time steps =        2048  2.00000000000000004E-003
+ Mass =   1.0000000000000000        1.0000000000000000     
+ Initial Momentum   0.0000000000000000        0.0000000000000000     
+ friction constant    6.0000000000000000     
+total energy   0.124207E+01
