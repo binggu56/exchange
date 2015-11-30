@@ -33,6 +33,10 @@ permutation symmetry
 @ 1.0.8 
  - reduce the distance
 
-@ 1.0.9 
+# 1.0.9 
  - harmonic chain to test the correctness of code 
  - analytical results 
+
+works for 9-atoms chain with periodic boundary conditions, not for other number of atoms  
+
+
