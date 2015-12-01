@@ -9,19 +9,70 @@
 
 ! ----------------------------------------------------------------------
 
+      module cdat 
+
+        implicit real*8(a-h,o-z)
+
+        real*8, public, parameter  :: pi = 4.d0*atan(1.d0)
+
+        complex*16, public, parameter :: im=(0d0,1d0)
+
+        integer*4 :: nb ! number of basis in the linear fitting 
+!        integer*4 :: ntraj,ndim,kmax
+
+      integer*4, parameter :: NATOMS = 3, NVBINS = 20000
+      real*8, parameter :: Req = 1.4d0, RATIO = 1.05
+      integer*4, parameter :: NIP = 2, NPAIRS = NIP*NATOMS/2 
+
+
+! --- random sampling 
+      
+      save
+      contains 
+
+      double precision function aver_traj(ntraj,w,x)
+
+        integer*4, intent(in) :: Ntraj
+
+        real*8 :: x(Ntraj),w(Ntraj)
+
+        aver_traj = 0d0
+
+        do i=1,Ntraj
+          aver_traj = aver_traj + x(i)*w(i)
+        enddo
+
+        end function aver_traj
+
+! ----- random number seeds
+        subroutine seed(idum,Ndim)
+
+        implicit real*8(a-h,o-z)
+
+        integer*4, intent(in) :: Ndim
+
+        integer*4, intent(out) :: idum(Ndim)
+
+        do i=1,Ndim
+          idum(i) = 5 + i
+        enddo
+
+        return
+        end subroutine
+
+      end module cdat
 
 ! --------main program 
 
       program eloc
 
       use cdat
-      use sys 
 
       implicit double precision (a-h, o-z)
 
 !      include 'sizes.h'
 
-!      include 'qsats.h'
+      include 'qsats.h'
 
       include 'mpif.h'
       
@@ -87,12 +138,12 @@
       if (myid == 0) then 
       
         open(103, file='en.dat',    action='write')
-        open(112, file='traj.dat',  action='write')
-        open(110, file='cor1.dat',  action='write')
-        open(111, file='cor2.dat',  action='write')
-        open(116, file='cor3.dat',  action='write')
-        open(114, file='rfit1.dat', action='write')
-        open(115, file='rfit2.dat', action='write')
+        open(112,  file='traj.dat', action='write')
+        open(110,  file='cor1.dat', action='write')
+        open(111,  file='cor2.dat', action='write')
+        open(116,  file='cor3.dat', action='write')
+        open(114,  file='rfit1.dat', action='write')
+        open(115,  file='rfit2.dat', action='write')
 
 !        write (6, 6001) NREPS, NATOMS, NATOM3, NATOM6, NATOM7,
 !     +                NVBINS, RATIO, NIP, NPAIRS
@@ -399,7 +450,7 @@
       t   = 0d0
 
       do i=1,Ndim
-        am(i) = am0*1836.15d0 
+        am(i) = am0*1836.15d0
         x0(i) = 0.0d0
         p0(i) = 0d0
         alpha(i) = a0
@@ -479,7 +530,6 @@
       endif ! root work end 
 
 !      time = mpi_wtime()
-
       call mpi_barrier(mpi_comm_world, ierr) 
 
 ! --- send required info {cf,x,p,r,w} for slave nodes 
@@ -528,6 +578,7 @@
       if (myid == root) then
 !        write(6,*) 's1',s1(1,1),s1(2,3)
         call fit(ntraj,ndim,cp,cr,s1,am,w)
+        write(6,*) 'initial test'
       endif
       
       call mpi_bcast(cp,(ndim+1)*ndim,mpi_double_precision,root,
@@ -712,7 +763,7 @@
 
 
 ! ------- propagate trajectory in each proc for one time step
-        call comp(am,wp,ntraj_proc,ndim,enu_proc,cp,cr,cp2,cr2,
+        call comp(am,wp,ntraj_proc,ndim,eup,cp,cr,cp2,cr2,
      +            x_proc,ap_proc,du_proc,fr_proc)
 
         call prop_p(myid,dt,ndim,ntraj_proc,cf,am,x_proc,p_proc,rp_proc,
@@ -760,7 +811,7 @@
         call mpi_reduce(env_proc,env,1,MPI_DOUBLE_PRECISION,MPI_SUM,
      +                  root,MPI_COMM_WORLD,ierr)
 
-        call mpi_reduce(enu_proc,enu,1,MPI_DOUBLE_PRECISION,MPI_SUM,
+        call mpi_reduce(eup,qu,1,MPI_DOUBLE_PRECISION,MPI_SUM,
      +                  root,MPI_COMM_WORLD,ierr)
 
         call mpi_reduce(enk_proc,enk,1,MPI_DOUBLE_PRECISION,MPI_SUM,
@@ -773,7 +824,7 @@
 C          time = mpi_wtime() - time 
 C          write(*,6690) time
 C6690      format('time to gather {x,p,r}',f12.6/)
-          write(103,1000) t,enk,env,enu,(env+enk+enu)
+          write(103,1000) t,enk,env,qu,(env+enk+qu)
           call flush(103)
 
           write(112,1000) t,(x_proc(1,i),i=1,20),(p_proc(1,i),i=1,20) 
@@ -880,10 +931,13 @@ C6690      format('time to gather {x,p,r}',f12.6/)
      +                rp_proc,ap_proc,wp,du_proc,fr_proc)
 
       use cdat
-      use sys
 
       implicit real*8(a-h, o-z)
 
+!      include 'sizes.h'
+
+      include 'qsats.h'
+      
       integer*4,intent(in)    :: myid,ntraj_proc,ndim
       real*8,   intent(in)    :: dt
       real*8, intent(in), dimension(ntraj_proc)  :: wp
@@ -928,13 +982,12 @@ C6690      format('time to gather {x,p,r}',f12.6/)
      +                  rp_proc,wp,du_proc,fr_proc,env_proc,enk_proc)
       
       use cdat
-      use sys 
 
       implicit real*8(a-h, o-z)
 
 !      include 'sizes.h'
 
-!      include 'qsats.h'
+      include 'qsats.h'
       
       integer*4,intent(in)    :: myid,ntraj_proc,ndim
       real*8,   intent(in)    :: dt
@@ -1125,8 +1178,8 @@ C6690      format('time to gather {x,p,r}',f12.6/)
       do i=1,Ntraj
         do j=1,Ndim
 1100      x(j,i) = gasdev(idum(j))
-          x(j,i) = x(j,i)/dsqrt(4d0*alpha(j))
-          if((x(j,i))**2 .gt. pow/2d0/alpha(j)) goto 1100
+          x(j,i) = x(j,i)/dsqrt(4d0*alpha(j)) + x0(j) 
+          if((x(j,i)-x0(j))**2 .gt. pow/2d0/alpha(j)) goto 1100
         enddo
       enddo
 
@@ -1135,7 +1188,7 @@ C6690      format('time to gather {x,p,r}',f12.6/)
       do i=1,Ntraj
         do j=1,Ndim
             p(j,i) = p0(j)
-            rp(j,i) = -2d0*alpha(j)*(x(j,i))
+            rp(j,i) = -2d0*alpha(j)*(x(j,i)-x0(j))
         enddo
       enddo
       

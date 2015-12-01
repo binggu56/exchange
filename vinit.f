@@ -15,7 +15,6 @@ c ----------------------------------------------------------------------
       subroutine vinit(rmin, bin)
       
       use cdat
-      use sys 
 
       implicit double precision (a-h, o-z)
 
@@ -27,7 +26,7 @@ c --- hartree to kelvin conversion factor
 
 !      include 'sizes.h'
 
-!      include 'qsats.h'
+      include 'qsats.h'
 
 !      r2min=9.0d0 ! Hinde  
       rmin = 0.2d0
@@ -115,8 +114,7 @@ c --- debugging output.
       r0 = 1.4d0 
 
       v = ak/2d0*(r-r0)**2
-      dv = ak*(r-r0)
-
+      dv = ak*(r-r0) 
       return 
       end subroutine 
 

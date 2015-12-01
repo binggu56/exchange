@@ -7,12 +7,11 @@ c ----------------------------------------------------------------------
 
       subroutine local(q, vloc, dv)
       use cdat
-      use sys
       
       implicit double precision (a-h, o-z)
 
 !      include 'sizes.h'
-!      include 'qsats.h' 
+      include 'qsats.h' 
 
       real*8, intent(out) :: vloc
 
